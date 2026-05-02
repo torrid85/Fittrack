@@ -1,39 +1,50 @@
-# models.py - Database models (tables) for the app
+"""Database models for the Offline Rural Health Management System."""
 
-from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
+from flask_sqlalchemy import SQLAlchemy
 
-# db is the SQLAlchemy instance shared across the app
+# Shared SQLAlchemy object
+# It is initialized inside create_app() in app.py
+
 db = SQLAlchemy()
 
 
-# ─── User Table ───────────────────────────────────────────────────────────────
+class Patient(db.Model):
+    """Stores basic patient registration details."""
 
-class User(db.Model):
-    """Stores registered users."""
-    id       = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String(80), unique=True, nullable=False)
-    password = db.Column(db.String(200), nullable=False)  # stored as a hash
+    id = db.Column(db.Integer, primary_key=True)
+    patient_code = db.Column(db.String(20), unique=True, nullable=False)
+    name = db.Column(db.String(120), nullable=False)
+    age = db.Column(db.Integer, nullable=False)
+    gender = db.Column(db.String(20), nullable=False)
+    village = db.Column(db.String(120), nullable=False)
+    phone_number = db.Column(db.String(20), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
-    # One user can have many workouts
-    workouts = db.relationship('Workout', backref='user', lazy=True)
+    # A patient can have many visit records
+    visits = db.relationship("Visit", backref="patient", lazy=True, cascade="all, delete-orphan")
+    emergency_requests = db.relationship(
+        "EmergencyRequest", backref="patient", lazy=True, cascade="all, delete-orphan"
+    )
 
-    def __repr__(self):
-        return f'<User {self.username}>'
+
+class Visit(db.Model):
+    """Stores each patient visit with diagnosis information."""
+
+    id = db.Column(db.Integer, primary_key=True)
+    patient_id = db.Column(db.Integer, db.ForeignKey("patient.id"), nullable=False)
+    visit_date = db.Column(db.String(20), nullable=False)
+    symptoms = db.Column(db.Text, nullable=False)
+    diagnosis = db.Column(db.Text, nullable=False)
+    medicines = db.Column(db.Text, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 
-# ─── Workout Table ─────────────────────────────────────────────────────────────
+class EmergencyRequest(db.Model):
+    """Stores one emergency ambulance request event."""
 
-class Workout(db.Model):
-    """Stores individual workout entries."""
-    id             = db.Column(db.Integer, primary_key=True)
-    workout_type   = db.Column(db.String(100), nullable=False)   # e.g. "Running"
-    duration       = db.Column(db.Integer, nullable=False)        # in minutes
-    calories       = db.Column(db.Integer, nullable=False)        # calories burned
-    date_logged    = db.Column(db.DateTime, default=datetime.utcnow)
-
-    # Foreign key linking this workout to a user
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-
-    def __repr__(self):
-        return f'<Workout {self.workout_type} - {self.calories} cal>'
+    id = db.Column(db.Integer, primary_key=True)
+    patient_id = db.Column(db.Integer, db.ForeignKey("patient.id"), nullable=False)
+    request_time = db.Column(db.DateTime, default=datetime.utcnow)
+    status = db.Column(db.String(40), default="Sent Successfully")
+    message = db.Column(db.Text, nullable=False)

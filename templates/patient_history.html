@@ -1,0 +1,43 @@
+{% extends 'base.html' %}
+{% block content %}
+<section class="card">
+  <h2>Patient History</h2>
+  <p><strong>{{ patient.name }}</strong> ({{ patient.patient_code }}) - {{ patient.village }}</p>
+  <a class="button-link" href="{{ url_for('main.add_visit', patient_id=patient.id) }}">Add Visit Record</a>
+</section>
+
+<section class="card">
+  <h3>Emergency Ambulance</h3>
+  <button class="emergency-btn" onclick="requestAmbulance({{ patient.id }})">Request Ambulance</button>
+  <p id="ambulance-status" class="status-text"></p>
+</section>
+
+<section class="card">
+  <h3>Visit Records</h3>
+  {% if visits %}
+    {% for visit in visits %}
+      <div class="visit-item">
+        <p><strong>Date:</strong> {{ visit.visit_date }}</p>
+        <p><strong>Symptoms:</strong> {{ visit.symptoms }}</p>
+        <p><strong>Diagnosis:</strong> {{ visit.diagnosis }}</p>
+        <p><strong>Medicines:</strong> {{ visit.medicines }}</p>
+      </div>
+    {% endfor %}
+  {% else %}
+    <p>No visits yet.</p>
+  {% endif %}
+</section>
+
+<section class="card">
+  <h3>Emergency Request Log</h3>
+  {% if emergencies %}
+    <ul>
+    {% for e in emergencies %}
+      <li>{{ e.request_time.strftime('%Y-%m-%d %H:%M:%S') }} - {{ e.status }}</li>
+    {% endfor %}
+    </ul>
+  {% else %}
+    <p>No emergency requests yet.</p>
+  {% endif %}
+</section>
+{% endblock %}

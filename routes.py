@@ -1,165 +1,109 @@
-# routes.py - All URL routes and logic for the Fitness Tracker
+"""All routes/views for the Offline Rural Health Management System."""
 
-from flask import Blueprint, render_template, request, redirect, url_for, session, flash
-from werkzeug.security import generate_password_hash, check_password_hash
-from models import db, User, Workout
+from datetime import datetime
+from flask import Blueprint, jsonify, redirect, render_template, request, url_for, flash
 
-# Blueprint groups all routes together; registered in app.py
-main = Blueprint('main', __name__)
+from models import db, Patient, Visit, EmergencyRequest
 
-
-# ─── Helper ────────────────────────────────────────────────────────────────────
-
-def get_current_user():
-    """Return the logged-in User object, or None if not logged in."""
-    user_id = session.get('user_id')
-    if user_id:
-        return User.query.get(user_id)
-    return None
+main = Blueprint("main", __name__)
 
 
-# ─── Auth Routes ───────────────────────────────────────────────────────────────
-
-@main.route('/')
-def index():
-    """Home page — redirect to dashboard if logged in, else to login."""
-    if get_current_user():
-        return redirect(url_for('main.dashboard'))
-    return redirect(url_for('main.login'))
+def generate_patient_id() -> str:
+    """Generate patient ID like P0001, P0002..."""
+    last_patient = Patient.query.order_by(Patient.id.desc()).first()
+    next_number = 1 if not last_patient else last_patient.id + 1
+    return f"P{next_number:04d}"
 
 
-@main.route('/register', methods=['GET', 'POST'])
-def register():
-    """Register a new user account."""
-    if request.method == 'POST':
-        username = request.form['username'].strip()
-        password = request.form['password']
+@main.route("/")
+def dashboard():
+    """Main dashboard with patient list and optional search."""
+    search_text = request.args.get("search", "").strip()
 
-        # Check if username already taken
-        if User.query.filter_by(username=username).first():
-            flash('Username already exists. Try another.', 'error')
-            return redirect(url_for('main.register'))
+    query = Patient.query
+    if search_text:
+        query = query.filter(
+            db.or_(Patient.name.ilike(f"%{search_text}%"), Patient.village.ilike(f"%{search_text}%"))
+        )
 
-        # Hash the password before storing (never store plain text!)
-        hashed_pw = generate_password_hash(password)
-        new_user = User(username=username, password=hashed_pw)
-        db.session.add(new_user)
+    patients = query.order_by(Patient.created_at.desc()).all()
+    return render_template("dashboard.html", patients=patients, search_text=search_text)
+
+
+@main.route("/add-patient", methods=["GET", "POST"])
+def add_patient():
+    """Register a new patient."""
+    if request.method == "POST":
+        new_patient = Patient(
+            patient_code=generate_patient_id(),
+            name=request.form["name"].strip(),
+            age=int(request.form["age"]),
+            gender=request.form["gender"],
+            village=request.form["village"].strip(),
+            phone_number=request.form["phone_number"].strip(),
+        )
+
+        db.session.add(new_patient)
         db.session.commit()
 
-        flash('Account created! Please log in.', 'success')
-        return redirect(url_for('main.login'))
+        flash(f"Patient added successfully. ID: {new_patient.patient_code}", "success")
+        return redirect(url_for("main.dashboard"))
 
-    return render_template('register.html')
-
-
-@main.route('/login', methods=['GET', 'POST'])
-def login():
-    """Log in an existing user."""
-    if request.method == 'POST':
-        username = request.form['username'].strip()
-        password = request.form['password']
-
-        user = User.query.filter_by(username=username).first()
-
-        # Verify user exists and password matches
-        if user and check_password_hash(user.password, password):
-            session['user_id'] = user.id   # save user in session
-            return redirect(url_for('main.dashboard'))
-        else:
-            flash('Invalid username or password.', 'error')
-
-    return render_template('login.html')
+    return render_template("add_patient.html")
 
 
-@main.route('/logout')
-def logout():
-    """Log out the current user by clearing the session."""
-    session.clear()
-    return redirect(url_for('main.login'))
+@main.route("/patient/<int:patient_id>")
+def patient_history(patient_id):
+    """Show all visit records for one patient."""
+    patient = Patient.query.get_or_404(patient_id)
+    visits = Visit.query.filter_by(patient_id=patient.id).order_by(Visit.created_at.desc()).all()
+    emergencies = (
+        EmergencyRequest.query.filter_by(patient_id=patient.id)
+        .order_by(EmergencyRequest.request_time.desc())
+        .all()
+    )
+    return render_template("patient_history.html", patient=patient, visits=visits, emergencies=emergencies)
 
 
-# ─── Dashboard ─────────────────────────────────────────────────────────────────
+@main.route("/patient/<int:patient_id>/add-visit", methods=["GET", "POST"])
+def add_visit(patient_id):
+    """Add a new visit record for a patient."""
+    patient = Patient.query.get_or_404(patient_id)
 
-@main.route('/dashboard')
-def dashboard():
-    """Main dashboard: shows summary stats for the logged-in user."""
-    user = get_current_user()
-    if not user:
-        return redirect(url_for('main.login'))
+    if request.method == "POST":
+        visit = Visit(
+            patient_id=patient.id,
+            visit_date=request.form["visit_date"],
+            symptoms=request.form["symptoms"].strip(),
+            diagnosis=request.form["diagnosis"].strip(),
+            medicines=request.form["medicines"].strip(),
+        )
+        db.session.add(visit)
+        db.session.commit()
 
-    workouts = Workout.query.filter_by(user_id=user.id).order_by(Workout.date_logged.desc()).all()
-
-    # Calculate summary stats
-    total_calories = sum(w.calories for w in workouts)
-    total_workouts = len(workouts)
-    total_minutes  = sum(w.duration for w in workouts)
+        flash("Visit record added successfully.", "success")
+        return redirect(url_for("main.patient_history", patient_id=patient.id))
 
     return render_template(
-        'dashboard.html',
-        user=user,
-        workouts=workouts,
-        total_calories=total_calories,
-        total_workouts=total_workouts,
-        total_minutes=total_minutes
+        "add_visit.html", patient=patient, today=datetime.utcnow().strftime("%Y-%m-%d")
     )
 
 
-# ─── Workout Routes ────────────────────────────────────────────────────────────
+@main.route("/patient/<int:patient_id>/request-ambulance", methods=["POST"])
+def request_ambulance(patient_id):
+    """Emergency endpoint: simulate sending SMS and store request."""
+    patient = Patient.query.get_or_404(patient_id)
 
-@main.route('/add_workout', methods=['GET', 'POST'])
-def add_workout():
-    """Add a new workout entry."""
-    user = get_current_user()
-    if not user:
-        return redirect(url_for('main.login'))
+    sms_message = (
+        f"EMERGENCY ALERT: Ambulance requested for {patient.name} "
+        f"({patient.patient_code}) from {patient.village}. Contact: {patient.phone_number}."
+    )
 
-    if request.method == 'POST':
-        workout_type = request.form['workout_type'].strip()
-        duration     = int(request.form['duration'])
-        calories     = int(request.form['calories'])
+    # Simulated SMS send (offline-safe): print to server console/log.
+    print("[SIMULATED SMS]", sms_message)
 
-        new_workout = Workout(
-            workout_type=workout_type,
-            duration=duration,
-            calories=calories,
-            user_id=user.id
-        )
-        db.session.add(new_workout)
-        db.session.commit()
-
-        flash('Workout logged successfully!', 'success')
-        return redirect(url_for('main.dashboard'))
-
-    return render_template('add_workout.html', user=user)
-
-
-@main.route('/workouts')
-def workouts():
-    """View all workouts for the logged-in user."""
-    user = get_current_user()
-    if not user:
-        return redirect(url_for('main.login'))
-
-    all_workouts = Workout.query.filter_by(user_id=user.id)\
-                                .order_by(Workout.date_logged.desc()).all()
-    return render_template('workouts.html', user=user, workouts=all_workouts)
-
-
-@main.route('/delete_workout/<int:workout_id>')
-def delete_workout(workout_id):
-    """Delete a specific workout by ID (only if it belongs to the user)."""
-    user = get_current_user()
-    if not user:
-        return redirect(url_for('main.login'))
-
-    workout = Workout.query.get_or_404(workout_id)
-
-    # Security check: make sure the workout belongs to this user
-    if workout.user_id != user.id:
-        flash('You cannot delete someone else\'s workout.', 'error')
-        return redirect(url_for('main.dashboard'))
-
-    db.session.delete(workout)
+    emergency = EmergencyRequest(patient_id=patient.id, message=sms_message, status="Sent Successfully")
+    db.session.add(emergency)
     db.session.commit()
-    flash('Workout deleted.', 'success')
-    return redirect(url_for('main.workouts'))
+
+    return jsonify({"status": "Sent Successfully", "message": "Ambulance request recorded and SMS simulated."})

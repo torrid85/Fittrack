@@ -1,0 +1,38 @@
+{% extends 'base.html' %}
+{% block content %}
+<section class="card">
+  <h2>Patient List Dashboard</h2>
+  <form method="GET" class="search-row">
+    <input type="text" name="search" placeholder="Search by name or village" value="{{ search_text }}" />
+    <button type="submit">Search</button>
+    <a class="button-link" href="{{ url_for('main.dashboard') }}">Clear</a>
+  </form>
+</section>
+
+<section class="card">
+  {% if patients %}
+  <table>
+    <thead>
+      <tr>
+        <th>Patient ID</th><th>Name</th><th>Age</th><th>Gender</th><th>Village</th><th>Phone</th><th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for p in patients %}
+      <tr>
+        <td>{{ p.patient_code }}</td>
+        <td>{{ p.name }}</td>
+        <td>{{ p.age }}</td>
+        <td>{{ p.gender }}</td>
+        <td>{{ p.village }}</td>
+        <td>{{ p.phone_number }}</td>
+        <td><a class="button-link" href="{{ url_for('main.patient_history', patient_id=p.id) }}">History</a></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p>No patients found.</p>
+  {% endif %}
+</section>
+{% endblock %}
