@@ -1,99 +1,54 @@
-# ⚡ FitTrack — Fitness Tracker Web App
+# Offline Rural Health Management System (Flask + SQLite)
 
-A simple, beginner-friendly fitness tracker built with **Flask + SQLite**.  
-Track your workouts, view a dashboard, and manage your fitness history.
+A simple, fully offline MVP for rural clinic management.
 
----
+## Features
 
-## 📁 Folder Structure
+1. Patient Registration (auto-generated Patient ID)
+2. Patient Dashboard with search (name/village)
+3. Add Visit Record linked to patient
+4. Patient History page with all visits
+5. Emergency Ambulance Request:
+   - One-click red button
+   - Confirmation popup
+   - Status update: `Sending...` -> `Sent Successfully`
+   - Simulated SMS in server console log
+   - Emergency request saved in database
 
-```
-fitness_tracker/
-├── app.py               ← Entry point; creates Flask app
-├── models.py            ← Database models (User, Workout)
-├── routes.py            ← All URL routes and logic
-├── requirements.txt     ← Python dependencies
-├── static/
-│   ├── css/
-│   │   └── style.css    ← Styling
-│   └── js/
-│       └── main.js      ← Small JS enhancements
-└── templates/
-    ├── base.html        ← Shared layout (navbar, flash messages)
-    ├── login.html       ← Login page
-    ├── register.html    ← Register page
-    ├── dashboard.html   ← Dashboard with stats
-    ├── add_workout.html ← Add workout form
-    └── workouts.html    ← Full workout history
-```
+## Tech Stack
 
-> **Note:** `fitness.db` (the SQLite database) is created automatically when you first run the app. You don't need to create it manually.
+- Backend: Flask (Python)
+- Database: SQLite (`health.db`)
+- Frontend: HTML/CSS/JavaScript
+- No internet APIs, no cloud dependency
 
----
+## Project Structure
 
-## 🚀 How to Run (Step-by-Step)
+- `app.py` - Flask app entry point
+- `models.py` - Database models
+- `routes.py` - Routes and business logic
+- `create_db.py` - Database creation script
+- `templates/` - HTML templates
+- `static/css/style.css` - Styling
+- `static/js/main.js` - Frontend JS behavior
+- `health.db` - Auto-created SQLite database file
 
-### Step 1 — Make sure Python is installed
-```bash
-python --version   # should be 3.8 or higher
-```
+## Setup and Run
 
-### Step 2 — Navigate to the project folder
-```bash
-cd fitness_tracker
-```
-
-### Step 3 — Create a virtual environment (recommended)
 ```bash
 python -m venv venv
-```
-
-Activate it:
-- **Windows:** `venv\Scripts\activate`
-- **Mac/Linux:** `source venv/bin/activate`
-
-### Step 4 — Install dependencies
-```bash
+source venv/bin/activate  # Windows: venv\Scripts\activate
 pip install -r requirements.txt
-```
-
-### Step 5 — Run the app
-```bash
+python create_db.py
 python app.py
 ```
 
-### Step 6 — Open in browser
-Visit: **http://127.0.0.1:5000**
+Open in browser:
 
----
+`http://127.0.0.1:5000`
 
-## ✅ Features
+## Notes
 
-| Feature              | Status |
-|----------------------|--------|
-| User Registration    | ✅     |
-| User Login/Logout    | ✅     |
-| Add Workout          | ✅     |
-| View All Workouts    | ✅     |
-| Delete Workout       | ✅     |
-| Dashboard Stats      | ✅     |
-| Password Hashing     | ✅     |
-| Session Management   | ✅     |
-
----
-
-## 🛠️ Tech Stack
-
-- **Backend:** Python 3, Flask
-- **Database:** SQLite (via Flask-SQLAlchemy)
-- **Frontend:** HTML5, CSS3, Vanilla JS
-- **Security:** Werkzeug password hashing
-
----
-
-## 💡 Notes for Beginners
-
-- The database (`fitness.db`) is created automatically — no setup needed.
-- Passwords are **hashed** using Werkzeug; they are never stored as plain text.
-- Sessions are used to keep users logged in between page visits.
-- `debug=True` in `app.py` means the server auto-restarts on code changes. Turn it off in production.
+- Works fully on localhost and offline.
+- Database file is local SQLite.
+- Code is intentionally beginner-friendly with comments.

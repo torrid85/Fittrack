@@ -1,0 +1,14 @@
+{% extends 'base.html' %}
+{% block content %}
+<section class="card">
+  <h2>Add Visit Record</h2>
+  <p>Patient: <strong>{{ patient.name }}</strong> ({{ patient.patient_code }})</p>
+  <form method="POST" class="form-grid">
+    <label>Date<input type="date" name="visit_date" value="{{ today }}" required /></label>
+    <label>Symptoms<textarea name="symptoms" required></textarea></label>
+    <label>Diagnosis<textarea name="diagnosis" required></textarea></label>
+    <label>Medicines<textarea name="medicines" required></textarea></label>
+    <button type="submit">Save Visit</button>
+  </form>
+</section>
+{% endblock %}
